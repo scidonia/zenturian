@@ -5,16 +5,18 @@
 A certifying permission broker and a set of Lean proxies for enforcing business rules across
 components written in any language.
 
-Status: planning. The implementation plan is [PLAN.md](PLAN.md); the certification and theorem
-design is [docs/theorem.md](docs/theorem.md). There is no build yet; the commands in the plan are
-the target interface created by milestone M0.
+Status: planning. [PLAN.md](PLAN.md) is the implementation plan,
+[docs/theorem.md](docs/theorem.md) the certification design, and
+[docs/zenturian-permissions-and-data-flow-pilot.md](docs/zenturian-permissions-and-data-flow-pilot.md)
+the first client pilot. There is no build yet; the commands in the plan are the target interface
+created by milestone M0.
 
 ## Design in one paragraph
 
 Every component talks only to its own Lean proxy. The proxy obtains a single-use, digest-bound
 permit from the central broker, verifies it, and forwards the call. Responses cross back as typed
-views with row-level invariants and disclosure checks, so a component can neither receive a row it
-is not entitled to nor receive a value from which a protected value is reconstructible. AI
+views with authoritative row scopes and disclosure checks, so a component can neither receive a row
+it is not entitled to nor receive a value from which a protected value is reconstructible. AI
 appraises natural-language business rules into a formal, checkable policy and explains decisions;
 it cannot mint a policy version or a permit.
 

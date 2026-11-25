@@ -50,7 +50,7 @@ It reaches the outside world only through a **proxy**: a Lean HTTP service that
 1. authenticates the caller,
 2. obtains from the **broker** a permit for the exact call,
 3. verifies the permit and the protocol shape,
-4. applies **view projection** and **row-level invariants** to the response,
+4. applies **view projection** and **row-scope checks against authoritative data** to the response,
 5. records the exchange.
 
 The broker owns the policy, certifies decisions, and keeps an append-only audit chain. The
@@ -75,8 +75,10 @@ it is the API surface.
 - Not a sandbox for arbitrary component code. Isolation is per-UID/network policy, not a VM.
 - Not a proof that a component does not leak what it has already received. The boundary controls
   what crosses it, not what a recipient does afterwards.
-- Not a replacement for a data store's own authorization. Authoritative stores sit behind read
-  interfaces whose responses are validated at the proxy.
+- Not a replacement for a data store's own authorization. Authoritative fact sources (the
+  directory and ledger in the pilot) are trusted for the facts they own, and their integrity and
+  freshness are client dependencies; components that transform or present data are not trusted
+  for those facts.
 - Not a proof of policy fidelity. A formal policy can be the wrong rule, faithfully enforced. AI
   appraisal and generated counterexamples reduce that risk; they do not eliminate it.
 
@@ -90,14 +92,16 @@ the Bristol manager.
 Both failures are outside an endpoint-level "may call `/report`" check. Zenturian addresses them
 at two different places:
 
-- the **extra row** by a `RowInvariant` on the response type, checked by the proxy on every row
-  before forwarding;
+- the **extra row** by checking every row against the authoritative scope for the report, with
+  stable row IDs and multiset equality. The trusted projector reads the scope and amounts from the
+  ledger; a label supplied by the reporting component is not evidence;
 - the **extra recipient** by making the recipient part of the call digest and the projection: the
   view is built *for* a principal, and the serializer refuses a different one.
 
 The tender example adds the harder case: each field is individually permitted, but
 `winningPrice - ownBid = delta` lets a bidder reconstruct a competitor's price. That is modelled
-by the **disclosure closure** in §3.4 and is the flagship demonstration.
+by the **disclosure closure** in §3.4 and is the second client demonstration, after the payroll
+pilot in §10.
 
 ---
 
@@ -359,6 +363,13 @@ expiry plus a policy-version bump; there is no revocation list. The TTL is the r
 policy change takes effect within one TTL. A proxy that cannot obtain the policy behind a permit's
 hash refuses the call.
 
+Permits authorise a call; they do not freeze the facts the call reads. For a disclosure-sensitive
+release, the release coordinator revalidates the authenticated recipient, the effective assignment
+and the active policy version at commit, and refuses if a fact or policy version changed while rows
+were being prepared. An unexpired permit alone is not a release authorisation. The payroll pilot
+serialises directory updates, policy promotion and release commitments through one coordinator
+(§10).
+
 ### 3.3 What a permit binds
 
 `Call` embeds its `Context` (principal, component, on-behalf-of chain, tenant, stable attributes)
@@ -537,9 +548,15 @@ structure ResponseInvariant (op : Op) where
 A single failing row refuses the entire response (`403`, reason `row_invariant`), and the audit
 records the invariant name and row index — not the row.
 
-This is what catches the omitted-filter bug. It does not stop a component encoding a salary in a
-free comment: that is why free-text fields are bounded and policy-controlled, and why the
-limitation is stated rather than papered over.
+An invariant over a field the component supplies is a consistency check, not a truth check: a
+compromised reporting component that labels a Cardiff row as Bristol satisfies
+`r.shop == requestedShop`. For a scope rule, the proxy or release gateway must obtain the row and
+its scope from the authoritative source, or verify a source-authenticated row; the reporting
+component supplies neither. The invariant is useful on top of that provenance.
+
+This checks the rows it is given; a scope rule needs the provenance above. It does not stop a
+component encoding a salary in a free comment: that is why free-text fields are bounded and
+policy-controlled, and why the limitation is stated rather than papered over.
 
 ### 4.3 Sessions
 
@@ -661,10 +678,13 @@ Order matters for both safety and information leak:
 8. forward,
 9. validate response type and invariants,
 10. project view,
-11. audit, then respond.
+11. for a disclosure-sensitive release, the trusted coordinator revalidates recipient, effective facts
+    and policy version at commit; a change refuses or retries under the new version,
+12. audit, then respond.
 
 Steps 3–6 are the proxy's own: the component never supplies or sees a permit. The permit is for the
-hop the proxy is about to make, and its digest covers that exact canonical call.
+hop the proxy is about to make, and its digest covers that exact canonical call. The release step is
+not part of the permit: a permit authorises the call, not the commit.
 
 The policy value and derivations are bounded in size (rule count, derivation depth); an oversized
 permit is refused. Derivations are checked with the same `check` function that appears in
@@ -729,6 +749,9 @@ issue counter: policy evaluation is a function of the policy value and the canon
   verifying permits already issued.
 - The audit chain is `seq, prevHash, ts, actor, callDigest, policyHash, verdict, permitId, reason`.
   `zenturian audit verify` recomputes the chain and reports the first break.
+- A release record adds recipient, report reference, fact versions, view id and decision reason; it
+  never records salary or bank values. The pilot's audit screen is a restricted projection of
+  these fields.
 - Payload arguments are not logged by default. The demo build may enable a redacted capture mode;
   the production default is digests only.
 - The broker logs every permit it issues. Proxies log every forward and rejection with the permit
@@ -771,6 +794,10 @@ Two modes, both explicit:
   public key and verifies it with the same libsodium binding used elsewhere. The front door is part
   of the authentication boundary, not the authorization boundary: the edge still derives every
   permission from the broker.
+
+The edge derives the principal and tenant from the authenticated session or verified assertion,
+never from a request body, query parameter or component-supplied header. A report's reader is the
+session principal; the body cannot choose it.
 
 No password hashing, JWT algorithm agility, or key management is invented in Lean. The rejected
 alternative — parsing OIDC/JWKS and verifying RS256 in Lean — adds crypto surface for no benefit in
@@ -929,7 +956,16 @@ operator principal. Generated HTML is served as static files; no browser-side po
 
 ## 10. Reference system
 
-Two domains, one deployment, used by every milestone demo:
+The first client-facing instantiation is the **payroll release pilot**:
+[docs/zenturian-permissions-and-data-flow-pilot.md](docs/zenturian-permissions-and-data-flow-pilot.md).
+It uses a synthetic tenant pair (North and South), a directory, a ledger, a reporting component, a
+trusted release coordinator and the edge. It defines six demonstration acts, a v1/v2 policy change,
+and a client acceptance gate. The reporting component supplies neither row scope nor amounts; the
+trusted projector reads the authoritative ledger by scope. This is the first demo and the first
+acceptance gate. The coordinator is a trusted Lean service in the gateway path, not a component; it
+serialises directory updates, policy promotion and release commits.
+
+The broader two-domain demo follows:
 
 **Procurement.** Components: `directory` (suppliers and buyers, Python), `bidding` (submissions and
 awards, Rust), `reporting` (comparison sheets and feedback, TypeScript). The edge (Lean/LeanIO)
@@ -937,14 +973,16 @@ renders the pages; the browser never reaches a component. Rules: bidders see onl
 feedback must not reveal the winning price or any value from which it is derivable; buyers see all
 bids for their tender; award requires segregation of duties.
 
-**Payroll.** Components: `directory` (employees, shops, managers, Python), `ledger` (payroll rows,
-Rust), `reporting` (report composition, TypeScript). Rules: a manager sees rows only for a shop
-they manage; a report's recipient must be that shop's current manager; a report's row set must
-match its named shop; cross-tenant rows are refused.
+**Payroll.** Components: `directory` (employees, shops, managers; Python), `ledger`
+(authoritative payroll rows, Rust), `reporting` (report metadata and preparation, TypeScript).
+Rules: a preparer may prepare for an assigned shop and closed period; at release the authenticated
+reader must be the active manager of that shop in the same tenant; each released row is from the
+authoritative ledger snapshot for that tenant, shop and period; a mixed-scope or cross-tenant row
+refuses the entire release.
 
-The demo has three browser flows: an allowed report, a denied cross-shop report, and a refused
-tender feedback that would have leaked the winning price. Each flow has a black-box scenario and a
-trace page.
+The payroll pilot is the payroll flow; the tender extension adds the disclosure closure. The
+project's v1 browser flows are the pilot's six acts plus the refused tender feedback. Each flow has
+a black-box scenario and a trace page.
 
 ---
 
@@ -978,7 +1016,9 @@ zenturian/
     hostile/      adversarial components
     proofs/       theorem regression (no `sorry`)
   docs/
-    theorem.md, threat-model.md, guarantees.md, policy-authoring.md, operations.md
+    theorem.md, threat-model.md, guarantees.md,
+    policy-authoring.md, operations.md,
+    zenturian-permissions-and-data-flow-pilot.md
   examples/briefs/   the payroll and tender briefs
   PLAN.md
   LICENSE  NOTICE  README.md  CONTRIBUTING.md  SECURITY.md
@@ -1025,7 +1065,7 @@ exit check; none is "done" on code alone.
 | M1 | Policy core and proofs | L | M0 | IR, canonical encoding, derivation checker, permits; `check_sound`, `verify_sound`, `canonical_injective` without `sorry`; 100+ generated cases agree with a reference evaluator |
 | M2 | Broker | M | M1 | decide/policy/audit endpoints; hash-addressed store; chain verification; Ed25519 sign/verify with test vectors; promotion recorded; benchmark of decide latency vs rule count |
 | M3 | Proxy + ledger end-to-end | L | M1, M2 | token admission, certify/verify, forward, audit; payroll allow and deny at the socket; replay and expiry refused; hostile component test |
-| M4 | Views, invariants, disclosure | L | M3 | row invariant catches the extra row; tender delta refused; cross-shop projection refused; attenuation check |
+| M4 | Views, invariants, disclosure | L | M3 | authoritative row scope catches the extra row and a mislabelled row; tender delta refused; cross-shop projection refused; attenuation check |
 | M5 | Edge, identity, browser flows | M | M3 | browser login, CSRF, allowed/denied report, denial page with audit id; dev IdP refuses in prod mode |
 | M6 | Multi-component flow | M | M4, M5 | `reporting → ledger` via proxies only; direct call fails; per-UID firewall test; second language (Rust) on the same discipline |
 | M7 | Appraisal pipeline | L | M1, M4 | corpus run with gates met or gaps listed; accepted policy promoted with evidence; replay backend reproduces a run |
@@ -1034,8 +1074,9 @@ exit check; none is "done" on code alone.
 
 **v1 is done when** all of the following hold on a fresh deployment:
 
-1. the three demo flows run from a browser: an allowed payroll report, a refused cross-shop
-   report, and a refused tender feedback that would have leaked the winning price;
+1. the payroll pilot's six acts run from a browser: preparation, the allowed release, the
+   manager-transfer refusal, the cross-shop and mixed-row refusals, and the v1/v2 acting-manager
+   change; the tender feedback that would have leaked the winning price is refused;
 2. a hostile component cannot reach another component, forge a permit, replay one, or exceed the
    body cap, and each attempt is visible in the audit;
 3. the appraisal pipeline reproduces the payroll and tender policies from the briefs with every
@@ -1143,13 +1184,16 @@ proved.
 | Property | Lean/QuickCheck-style | round-trip, decoder fuzz, verdict vs reference |
 | Contract | public sockets | allow, deny, replay, expiry, invariant, disclosure, session order |
 | Hostile | separate UIDs/namespaces | direct connect, forged permit, oversized body, unknown op, slowloris |
-| End-to-end | browser + services | three demo flows, trace page |
+| End-to-end | browser + services | payroll pilot acts, tender refusal, trace page |
 | Failure injection | compose/NixOS VM | broker down, audit disk full, proxy kill, component kill |
 | Appraisal eval | offline | corpus metrics and gates |
 | Performance | bench binary | decide latency vs rules, proxy overhead, 1 MiB body cost |
 
 Every security-relevant refusal has a positive control in the same run: the same request with the
 missing condition removed must succeed, so a checker that refuses everything cannot pass.
+
+Proof and scenario mutation: removing the recipient check or changing the charged-shop filter must
+break a proof or a scenario; a suite that stays green is vacuous.
 
 ### 13.3 Performance budget
 
@@ -1168,6 +1212,7 @@ compared across sessions.
 | Authenticated user | a valid session | broker policy + views | policy fidelity; a permitted disclosure |
 | Compromised component | its own token and UID; arbitrary code | proxy verifies every call; it can act only as itself | it retains and may leak what it received; free-text channels |
 | Compromised proxy | can skip its own verification; can suppress local logs | broker logs the permit it issued; the digest binds the call; permits cannot be widened; other proxies verify independently | it can forward an allowed call and lie about it; attestation out of scope |
+| Compromised fact source | false directory assignment or ledger row | source-authenticated snapshots; client integrity dependency | wrong facts; the theorem is relative to the snapshot |
 | Local unprivileged user | read files, open loopback ports | `0400` credentials, UID-scoped nftables, signed permits | host root; a leaked broker signing key |
 | Compromised broker | mint any permit | separate UID, no data, read-only policy, append-only audit | total authorization compromise; recorded assumption |
 | Wrong or malicious AI output | propose policy, views, scenarios | Lean validation, static analysis, scenarios, citations, human promotion | reviewer error; modelling error |
@@ -1195,10 +1240,15 @@ The guarantees are conditional on these; changing one changes the threat model:
    manifest; without this, a certificate describes a document rather than the deployment.
 10. **Certifier build.** The certifier is built from the audited source at the recorded hash;
     reproducibility is the goal, and the hash is audited while the Lake dependency gap remains.
+11. **Facts.** Directory and ledger facts are correct for the snapshot used; the release
+    coordinator serialises fact updates, policy promotion and release commits, or the source
+    declares a freshness bound.
+12. **Release revalidation.** A disclosure-sensitive release revalidates recipient, facts and
+    policy at commit; an unexpired permit alone is not a release authorisation.
 
 Assumptions 1–3 are what the permit theorems rest on; 5 and 9–10 are what the deployment
-certificate rests on; 6–8 are what the business-rule claim rests on. They are why the system
-certifies enforcement, not correctness.
+certificate rests on; 11–12 are what the release theorem rests on; 6–8 are what the business-rule
+claim rests on. They are why the system certifies enforcement, not correctness.
 
 ---
 
@@ -1264,7 +1314,7 @@ appraisal can be reproduced or challenged without access to a private service.
 | Decision | Options | Default |
 |---|---|---|
 | Repository home | `scidonia/zenturian` vs user account | **scidonia** |
-| Demo domain order | tender first vs payroll first | **tender** (disclosure story), payroll immediately after |
+| Demo domain order | payroll first vs tender first | **payroll** (client pilot, §10); tender is the disclosure extension |
 | Human authority at promotion | always human vs auto-accept mode | **always human in v1**; auto-accept only with a recorded evidence bundle, off by default |
 | Multi-host | v1 vs later | **later**; permits are signed in v1, so remote proxies need no format change |
 | External IdP | front-door signed assertion vs OIDC in Lean | **front-door assertion** |

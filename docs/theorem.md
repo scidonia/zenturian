@@ -10,6 +10,10 @@ proxies and broker instantiated from a verified Lean template, described by a ma
 topology and key set. It is not a proof that the running LeanIO binaries, the OS, the crypto
 library, or an arbitrary component are correct. Every later claim is relative to that boundary.
 
+The payroll release pilot is the first instantiation:
+[zenturian-permissions-and-data-flow-pilot.md](zenturian-permissions-and-data-flow-pilot.md). It
+adds the commit-time revalidation in §5.1 and the fact-snapshot assumptions in §7.
+
 ---
 
 ## 1. Claim and non-claims
@@ -52,8 +56,8 @@ structure Deployment where
 ```
 
 `State` carries the policy hash, issued permits, per-node local state (session phase, nonce
-cache, sequence counters), in-flight messages, forwarded calls, deliveries, component knowledge,
-and the audit log.
+cache, sequence counters), fact versions and snapshots, in-flight messages, forwarded calls,
+deliveries, component knowledge, and the audit log.
 
 `Step` is the protocol's labelled transition relation. Components are the adversary:
 `componentSend` may emit any message. The network may `drop`, `delay` and reorder, and may
@@ -119,6 +123,9 @@ theorem deployment_safety (d : Deployment) (h : Valid d) :
 7. **Adversary steps.** Component sends and network drops/reorders change no invariant;
    injections fail authentication.
 
+`Disclosable` is evaluated at the release commit, not at the decision or the socket write; §5.1
+makes the commit revalidation explicit.
+
 Safety is the target. Completeness (“an authorised call can obtain a permit”) is a separate
 theorem with fairness assumptions and is not part of v1's claim. Full noninterference is not
 claimed; disclosure is a per-delivery label invariant plus the declared-fact closure, because
@@ -180,6 +187,17 @@ Channel authentication prevents an unauthenticated local process from injecting 
 message or racing the broker's port. It does not replace the permit signature: a compromised
 proxy can talk on the channel, but cannot mint a permit for another proxy.
 
+### 5.1 Release-time revalidation
+
+A permit authorises a call, not a commit. For a disclosure-sensitive release, the delivery step is
+a serialized commit that revalidates the authenticated recipient, the effective facts and the
+policy version, and refuses if any changed. The payroll pilot's coordinator orders directory
+updates, policy promotion and release commits in one state transition; an asynchronous directory
+needs a declared freshness bound, which becomes an additional `Valid` check.
+
+Without this step the invariant is about the decision snapshot, not the delivered view. The
+per-call permit remains necessary; it is not sufficient for release.
+
 ---
 
 ## 6. The certifier
@@ -215,7 +233,9 @@ Finite checks (`Valid`):
 6. keys are pinned; template hashes match the certified template;
 7. nonce cache TTL ≥ permit TTL; clock-skew bound is declared;
 8. the trust set contains the broker and the proxies serving trusted components;
-9. names, tenants and operation identifiers are unique where required.
+9. names, tenants and operation identifiers are unique where required;
+10. every disclosure path has a serialized release coordinator that revalidates recipient, facts
+    and policy at commit; an asynchronous fact source declares its freshness bound.
 
 Output: a certificate containing the manifest hash, policy hash, theorem name, assumption list,
 checker build hash, and the check results; the deployer signs the manifest and the certificate.
@@ -252,6 +272,7 @@ certifier rejects an unknown template hash rather than assuming it correct.
 | OS isolation (UIDs, nftables, cgroups) | Trusted; tested | Topology is not a Lean theorem |
 | Broker signing key, TLS/peer credentials | Trusted custody | Compromise is total |
 | Clock | Bounded skew assumed | Expiry and replay reasoning |
+| Authoritative fact sources (directory, ledger) | Trusted for the facts they own; freshness is a client dependency | The theorem is relative to the fact snapshot |
 | Policy source and appraisal | Not proved | AI proposes; human promotes |
 
 Named assumptions:
@@ -266,9 +287,12 @@ Named assumptions:
 8. A component may retain and later disclose what it legitimately received.
 9. The edge verifies the front door's assertion and uses the asserted principal as the call
    subject; identity is only as good as that channel.
+10. **Facts.** Directory and ledger facts are correct for the snapshot used; the release
+    coordinator serialises fact updates, policy promotion and release commits, or the source
+    declares a freshness bound.
 
-Assumptions 1–3 support the permit theorem; 4–6 and 9 support the global invariant and
-certificate; 7–8 bound the business claim. They are listed in every certificate.
+Assumptions 1–3 support the permit theorem; 4–6, 9–10 support the global invariant and certificate;
+7–8 bound the business claim. They are listed in every certificate.
 
 ---
 
@@ -283,6 +307,8 @@ certificate; 7–8 bound the business claim. They are listed in every certificat
   later. Views, bounds and field policy reduce the channel; they do not close it.
 - Side channels, traffic analysis, and timing leaks are not modelled.
 - Liveness, availability, and denial of service are not safety properties.
+- Correctness of authoritative directory and ledger facts. A lying source defeats the release
+  theorem, which is relative to the snapshot it supplies.
 - Policy fidelity: a correct enforcement of the wrong rule is still the wrong rule.
 
 ---
@@ -359,6 +385,7 @@ P0's success criteria:
 | Crypto treatment | idealised vs computational | idealised; name the assumptions |
 | Model-checking spike | TLA+/Alloy vs Lean only | optional TLA+ for protocol shape; Lean for the theorem |
 | Attestation | config hashes vs TPM | config hashes first; TPM later |
+| Release consistency | serialized coordinator vs freshness bound | serialized coordinator for the pilot; declared freshness bound for asynchronous sources |
 | Policy certification unit | per version+manifest | per version+manifest; re-certify on change |
 
 ---
@@ -368,5 +395,6 @@ P0's success criteria:
 For every reachable trace of a deployment whose proxies and broker are instances of the verified
 template, whose manifest satisfies `Valid`, and whose trusted set is as declared, every
 forwarded call is authorised by the pinned policy, every delivered value is within its declared
-view and closure, and every permit and forward is in the audit chain — under the assumptions in
+view and closure at a release commit that revalidated the recipient, the effective facts and the
+policy version, and every permit and forward is in the audit chain — under the assumptions in
 §7, and with the exclusions in §8.
