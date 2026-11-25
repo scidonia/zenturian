@@ -1,0 +1,18 @@
+Zenturian
+Copyright 2026 The Zenturian Authors
+
+This product includes software developed by the Zenturian Authors.
+
+Third-party components the project uses, or is designed to link:
+
+- LeanIO (https://github.com/scidonia/leanio), MIT License.
+  Copyright (c) 2026 ecyrbe.
+- LeanIn (https://github.com/scidonia/leanin), Apache License 2.0.
+  Copyright 2026 Scidonia Limited.
+- libuv (https://github.com/libuv/libuv), MIT License.
+  Copyright the libuv contributors.
+- libsodium (https://libsodium.org), ISC License.
+  Copyright the libsodium authors.
+
+The full license text for each component is distributed with that component
+and is included in release artifacts.

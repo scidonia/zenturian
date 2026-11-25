@@ -1,0 +1,13 @@
+# Lean / Lake
+.direnv/
+.lake/
+.lake-packages/
+build/
+*.olean
+*.ilean
+
+# Appraisal runs
+appraisal/runs/
+
+# OS / editor
+.DS_Store
