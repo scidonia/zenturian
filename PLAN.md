@@ -1,6 +1,6 @@
 # Zenturian — implementation plan
 
-Status: planning. No code yet.
+Status: planning. A JavaScript prototype exists under `examples/payroll/`; the Lean system still has no build.
 Target: a permission system in which every inter-component call is mediated by a Lean proxy and
 certified by a central broker, with business rules appraised and visualised by AI.
 

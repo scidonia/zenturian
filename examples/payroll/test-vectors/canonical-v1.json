@@ -1,0 +1,82 @@
+{
+  "v": 1,
+  "description": "Pinned zcanon.v1 encodings and zenturian.call.v1 digests. The JavaScript encoder verifies these at start; the Lean encoder must reproduce them.",
+  "vectors": [
+    {
+      "name": "empty-object",
+      "input": {},
+      "canonical": "{}"
+    },
+    {
+      "name": "scalars",
+      "input": [null, true, false, 0, 42, -7],
+      "canonical": "[null,true,false,0,42,-7]"
+    },
+    {
+      "name": "key-order-ascii",
+      "input": { "b": 1, "a": 2, "A": 3 },
+      "canonical": "{\"A\":3,\"a\":2,\"b\":1}"
+    },
+    {
+      "name": "string-escapes",
+      "input": { "newline": "\n", "quote": "\"", "backslash": "\\", "unicode": "é" },
+      "canonical": "{\"backslash\":\"\\\\\",\"newline\":\"\\n\",\"quote\":\"\\\"\",\"unicode\":\"é\"}"
+    },
+    {
+      "name": "nested",
+      "input": { "z": [{ "b": 2, "a": 1 }], "a": "x" },
+      "canonical": "{\"a\":\"x\",\"z\":[{\"a\":1,\"b\":2}]}"
+    },
+    {
+      "name": "utf8-key-order",
+      "input": { "\u00e9": 3, "\uffff": 2, "\ud83d\ude00": 1 },
+      "canonical": "{\"é\":3,\"\uffff\":2,\"😀\":1}"
+    },
+    {
+      "name": "empty-array-and-null",
+      "input": { "a": [], "b": null },
+      "canonical": "{\"a\":[],\"b\":null}"
+    },
+    {
+      "name": "call-gateway-ledger-rows",
+      "call": {
+        "v": 1,
+        "caller": "gateway",
+        "audience": "ledger",
+        "subject": "alice",
+        "onBehalfOf": "alice",
+        "tenant": "north",
+        "op": "rows",
+        "resource": { "type": "ledger-scope", "id": "snap-north-bristol-2026-10" },
+        "args": {
+          "tenant": "north",
+          "shop": "north/bristol",
+          "period": "2026-10",
+          "snapshotId": "snap-north-bristol-2026-10"
+        }
+      },
+      "canonical": "{\"args\":{\"period\":\"2026-10\",\"shop\":\"north/bristol\",\"snapshotId\":\"snap-north-bristol-2026-10\",\"tenant\":\"north\"},\"audience\":\"ledger\",\"caller\":\"gateway\",\"onBehalfOf\":\"alice\",\"op\":\"rows\",\"resource\":{\"id\":\"snap-north-bristol-2026-10\",\"type\":\"ledger-scope\"},\"subject\":\"alice\",\"tenant\":\"north\",\"v\":1}",
+      "digest": "7e79b217b0b8187fab10bc6a99cebaa2fa0737800e047d268f724a8f3d0222dc"
+    },
+    {
+      "name": "call-gateway-reporting-store",
+      "call": {
+        "v": 1,
+        "caller": "gateway",
+        "audience": "reporting",
+        "subject": "nora",
+        "onBehalfOf": "nora",
+        "tenant": "north",
+        "op": "store",
+        "resource": { "type": "report", "id": "00000000-0000-4000-8000-000000000000" },
+        "args": {
+          "reportId": "00000000-0000-4000-8000-000000000000",
+          "title": "north/north-bristol payroll 2026-10",
+          "status": "prepared"
+        }
+      },
+      "canonical": "{\"args\":{\"reportId\":\"00000000-0000-4000-8000-000000000000\",\"status\":\"prepared\",\"title\":\"north/north-bristol payroll 2026-10\"},\"audience\":\"reporting\",\"caller\":\"gateway\",\"onBehalfOf\":\"nora\",\"op\":\"store\",\"resource\":{\"id\":\"00000000-0000-4000-8000-000000000000\",\"type\":\"report\"},\"subject\":\"nora\",\"tenant\":\"north\",\"v\":1}",
+      "digest": "9eaa9e1e94385d81f976287a4abfa644b978360839114c1cc961a622acf71a57"
+    }
+  ]
+}

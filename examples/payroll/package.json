@@ -1,0 +1,13 @@
+{
+  "name": "zenturian-payroll-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Runnable JavaScript model of the Zenturian payroll release pilot",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "demo": "node src/demo.mjs"
+  }
+}

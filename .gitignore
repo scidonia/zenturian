@@ -9,5 +9,8 @@ build/
 # Appraisal runs
 appraisal/runs/
 
+# Payroll example state
+examples/payroll/.state/
+
 # OS / editor
 .DS_Store

@@ -8,8 +8,9 @@ components written in any language.
 Status: planning. [PLAN.md](PLAN.md) is the implementation plan,
 [docs/theorem.md](docs/theorem.md) the certification design, and
 [docs/zenturian-permissions-and-data-flow-pilot.md](docs/zenturian-permissions-and-data-flow-pilot.md)
-the first client pilot. There is no build yet; the commands in the plan are the target interface
-created by milestone M0.
+the first client pilot. A JavaScript prototype of that pilot exists under
+[examples/payroll/](examples/payroll/); the Lean system still has no build, and the commands in
+the plan are the target interface created by milestone M0.
 
 ## Design in one paragraph
 
