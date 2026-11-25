@@ -28,6 +28,7 @@ It is deliberately explicit about what is *proved*, what is *enforced by deploym
 | What does the broker certify? | That a specific call, by a specific component on behalf of a specific principal, is permitted by a specific policy version. The permit carries a machine-checkable derivation. |
 | How is the permit bound to the call? | Canonical encoding of the call → SHA-256 digest. Permit contains the digest; the proxy recomputes it from the request it is about to forward. |
 | What does Lean actually guarantee? | Checker soundness against the policy semantics; permit/call binding; per-view field disclosure; session sequencing; protocol shapes. Kernel-checked. |
+| What is the certification unit? | A manifest: verified proxy/broker templates + policy + topology + keys. Not the running binaries; not arbitrary component code. |
 | What is not proved? | That the policy captures the business rule (AI + review), that deployment isolation holds (tested), that a component does not retain or leak data it already received. |
 | Policy evaluation engine | Lean; the IR is authored as JSON and compiled to a checkable Lean policy value. |
 | AI authority | AI proposes rules, scenarios and explanations; it cannot mint a policy version or a permit. Promotion is a recorded, authenticated action. |
@@ -348,6 +349,10 @@ become a plausible-looking "deny" that the audit then presents as proof of absen
 Replay is operational, not semantic: the proxy keeps a bounded set of seen nonces until expiry and
 refuses duplicates. This is not part of `Allows`, and the guarantee is stated as "a duplicate
 permit is refused by a live proxy" — a tested property, not a theorem.
+
+The global claim, deployment model, certifier and trusted computing base are specified in
+[docs/theorem.md](docs/theorem.md). The theorem is about a certified deployment of verified
+templates, not about the running binaries.
 
 Permits are short-lived: 30 s by default, 5 s for `disclose`-effect operations. Revocation in v1 is
 expiry plus a policy-version bump; there is no revocation list. The TTL is the retirement bound: a
@@ -960,8 +965,10 @@ zenturian/
     Proxy/       Runtime, Admission, Pipeline, Limits, AuditClient
     Broker/      Server, Store, Audit
     Edge/        Server, Session, Identity, Render
+    Proofs/      Deployment, Monitor, Relay, Disclosure
+    Certify/     Manifest, Valid, Certificate, Main
     Codegen/     Schema, TS, Python, Rust
-    App/         Main (subcommands: broker, proxy, edge, policy, audit, codegen)
+    App/         Main (subcommands: broker, proxy, edge, policy, certify, audit, codegen)
   clients/       generated; committed; drift-checked
   appraisal/      Python pipeline, prompts, schemas, corpus, runs/ (gitignored)
   viz/           static build from IR + audit
@@ -971,7 +978,7 @@ zenturian/
     hostile/      adversarial components
     proofs/       theorem regression (no `sorry`)
   docs/
-    threat-model.md, guarantees.md, policy-authoring.md, operations.md
+    theorem.md, threat-model.md, guarantees.md, policy-authoring.md, operations.md
   examples/briefs/   the payroll and tender briefs
   PLAN.md
   LICENSE  NOTICE  README.md  CONTRIBUTING.md  SECURITY.md
@@ -1036,7 +1043,10 @@ exit check; none is "done" on code alone.
 4. the trace page answers "why did this principal see this value?" from the audit chain and the
    policy version alone;
 5. the release is reproducible from the flake, carries an SBOM, is signed, and is published under
-   Apache-2.0 with the community files in place.
+   Apache-2.0 with the community files in place;
+6. `zenturian certify` accepts the reference manifest and rejects one with a missing proxy, an
+   amplified relay edge, or an undeclared view, and the certified-deployment theorem is checked
+   for that manifest.
 
 ### 12.1 M1 detail — the semantic core
 
@@ -1078,6 +1088,27 @@ with:
 - the tender leak scenario refused and the payroll extra-row scenario caught;
 - a rerun from `evidence.json` reproducing the same policy hash with the replay backend.
 
+### 12.4 Proof and certification track
+
+The global claim is gated separately from the service milestones. Its model, theorem, certifier,
+trusted computing base and exclusions are specified in [docs/theorem.md](docs/theorem.md); this
+is the schedule.
+
+| Phase | Deliverable | Gate |
+|---|---|---|
+| P0 | Two proxies + broker + one policy; toy `deployment_safety`; measured proof effort | 2–3 week timebox; go/no-go before M1 |
+| P1 | Core proofs: checker, decision, canonical binding, permits, sessions, views | M1, no `sorry` |
+| P2 | Trace model, relay attenuation, disclosure, audit; payroll instantiation | M2–M4 |
+| P3 | Trace logging and replay/conformance; hostile component suite | M3–M5 |
+| P4 | Manifest `Valid`, `zenturian certify`, CI gate | M5–M7 |
+| P5 | Published theorem, assumptions, TCB, external review | M9 |
+
+If P0 fails, the global claim is withdrawn; the local monitor proofs and conformance tests
+remain. The certifier does not ship with an overstated certificate.
+
+The theorem is about a certified deployment of verified templates, not the running binaries.
+That sentence belongs in the certificate's assumption list, not only in the documentation.
+
 ---
 
 ## 13. Verification
@@ -1096,16 +1127,18 @@ with:
 | Components cannot reach each other | UID, nftables, no route | hostile-component test | host root, shared kernel |
 | Audit is tamper-evident | hash chain | verify command; corruption test | broker can truncate; anchoring is future work |
 | A policy change is reviewable | immutable versions + evidence bundle | promotion records; diff view | reviewer error |
+| A certified deployment enforces the policy at every trusted hop | trace model + manifest checks | `deployment_safety`; `zenturian certify` report | trusted shell; policy fidelity; declared trust set |
 
 Not claimed: correctness of the business rule in the world; absence of side channels; that a
 component forgets what it received; multi-host security in v1; formal verification of LeanIO or
-LeanIn.
+LeanIn; that the running processes refine the protocol model — that gap is conformance-tested, not
+proved.
 
 ### 13.2 Test matrix
 
 | Class | Runs where | Examples |
 |---|---|---|
-| Proofs | `lake build` | soundness, injectivity, closure |
+| Proofs | `lake build` | soundness, injectivity, closure, deployment invariant, certifier checks |
 | Unit | Lean | canonical encoding, parser, rule evaluation |
 | Property | Lean/QuickCheck-style | round-trip, decoder fuzz, verdict vs reference |
 | Contract | public sockets | allow, deny, replay, expiry, invariant, disclosure, session order |
@@ -1158,9 +1191,14 @@ The guarantees are conditional on these; changing one changes the threat model:
 7. **Declared knowledge.** The disclosure closure is complete for the prior knowledge declared to
    it; undeclared world knowledge is not modelled.
 8. **Recipients.** A component may retain and later disclose what it legitimately received.
+9. **Attestation.** The running proxies and broker match the template and config hashes in the
+   manifest; without this, a certificate describes a document rather than the deployment.
+10. **Certifier build.** The certifier is built from the audited source at the recorded hash;
+    reproducibility is the goal, and the hash is audited while the Lake dependency gap remains.
 
-Assumptions 1–3 are what the permit theorems rest on; 6–8 are what the business-rule claim rests on.
-They are why the system certifies enforcement, not correctness.
+Assumptions 1–3 are what the permit theorems rest on; 5 and 9–10 are what the deployment
+certificate rests on; 6–8 are what the business-rule claim rests on. They are why the system
+certifies enforcement, not correctness.
 
 ---
 
@@ -1216,6 +1254,7 @@ appraisal can be reproduced or challenged without access to a private service.
 | LeanIn/LeanIO native gaps (unbounded body, loopback-only listener, no UDS, drain) | DoS, deployment constraint, isolation weakness, shutdown loss | proxy-level cap; front-door ingress; token + UID isolation; UDS upstream task; drain tested with in-flight calls |
 | Crypto binding in Lean | implementation risk | minimal surface (Ed25519 permit signatures and front-door assertions), libsodium, test vectors, no hand-rolled primitives |
 | Proof maintenance as policy model evolves | drift between theorem and code | one `check` function used by theorem and runtime; proof regression target; `sorry`/axiom scan in CI |
+| Model/implementation drift | theorem about a model, not the binaries | thin shell, trace conformance, template hashes, startup attestation |
 | Operational complexity | adoption failure | one binary with subcommands, NixOS module, compose example, `zenturian doctor` |
 | Broker compromise | total authorization compromise | small process, no data, read-only policy, separate UID; recorded assumption; future signer split |
 | Performance of per-call certification | latency | short-lived permits for repeated reads where the policy allows, each still bound to one call; measure before optimizing |
@@ -1233,6 +1272,9 @@ appraisal can be reproduced or challenged without access to a private service.
 | Audit payload capture | digests only vs redacted capture | **digests only**; demo mode explicitly enabled |
 | Visualisation | data-driven views with AI narration vs AI-generated pages | **data-driven**; AI cannot introduce an edge or a number absent from the IR |
 | Runtime AI | none vs inline explanations | **none**; explanations are generated offline into the UI build |
+| Theorem scope | certified deployment of verified templates vs running binaries | **certified deployment**; refinement is tested, not proved |
+| Trust set | all-or-nothing vs per-proxy | **per-proxy**; the certificate names the components it covers |
+| Certifier output | signed manifest + reproducible report vs serialised proof | **signed manifest**; re-run from source |
 
 ---
 
@@ -1252,6 +1294,8 @@ appraisal can be reproduced or challenged without access to a private service.
    to CI.
 10. Demo script for M1–M3, written before the code: the three payroll verdicts and the tender
     refusal, at the socket.
+11. Run the P0 theorem spike from §12.4 against [docs/theorem.md](docs/theorem.md); record the
+    go/no-go before M1.
 
 The sequence is deliberate: the semantic core and its proof come before any service code, and the
 first proxy is built around the payroll failure rather than a toy endpoint. Every later component

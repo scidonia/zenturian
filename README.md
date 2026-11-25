@@ -5,8 +5,9 @@
 A certifying permission broker and a set of Lean proxies for enforcing business rules across
 components written in any language.
 
-Status: planning. The implementation plan is [PLAN.md](PLAN.md). There is no build yet; the
-commands in the plan are the target interface created by milestone M0.
+Status: planning. The implementation plan is [PLAN.md](PLAN.md); the certification and theorem
+design is [docs/theorem.md](docs/theorem.md). There is no build yet; the commands in the plan are
+the target interface created by milestone M0.
 
 ## Design in one paragraph
 
