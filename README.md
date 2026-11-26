@@ -21,12 +21,6 @@ it is not entitled to nor receive a value from which a protected value is recons
 appraises natural-language business rules into a formal, checkable policy and explains decisions;
 it cannot mint a policy version or a permit.
 
-## Brand assets
-
-The canonical mark is [assets/logo.svg](assets/logo.svg), transparent, with a cream card at
-[assets/logo-card.svg](assets/logo-card.svg). Palette: navy `#0b2141`, red `#e32f15`, cream
-`#fceac7`. The source raster is [assets/logo.png](assets/logo.png).
-
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
