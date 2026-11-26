@@ -55,6 +55,20 @@ body {
   margin-bottom: 0.75rem;
 }
 
+.mast-end {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.corner-reset {
+  flex: none;
+  align-self: center;
+  padding: 0.4rem 0.9rem;
+}
+
 .logo {
   height: 76px;
   width: auto;
@@ -379,7 +393,8 @@ footer p { margin: 0; font-size: 0.78rem; }
   .frame { height: auto; }
   main { grid-template-columns: 1fr 1fr; }
   .mast { grid-template-columns: auto 1fr; }
-  .meters { grid-column: 1 / -1; justify-content: flex-start; }
+  .mast-end { grid-column: 1 / -1; align-items: flex-end; }
+  .meters { justify-content: flex-start; }
 }
 
 @media (max-width: 860px) {

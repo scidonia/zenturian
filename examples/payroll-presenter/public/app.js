@@ -389,6 +389,7 @@ document.querySelector('#transfer').addEventListener('click', () => post('/api/t
 document.querySelector('#restore').addEventListener('click', () => post('/api/restore'));
 document.querySelector('#mixed').addEventListener('click', () => post('/api/mixed'));
 document.querySelector('#reset').addEventListener('click', () => post('/api/reset'));
+document.querySelector('#reset-corner').addEventListener('click', () => post('/api/reset'));
 
 for (const button of document.querySelectorAll('[data-policy]')) {
   button.addEventListener('click', () => post('/api/policy', { version: button.dataset.policy }));

@@ -371,14 +371,12 @@ async function reset() {
   reportId = null;
   lastReleaseText = null;
   mixedOutcome = null;
+  principal = 'nora';
   system = await startAll({ clock: () => now });
   await previous.close().catch((error) => {
     console.error(error);
   });
-  last = emptyOutcome(
-    'reset',
-    'The model restarted from the opening fixture. The clock is 15 November 2026 and the policy is v1.',
-  );
+  last = null;
 }
 
 function requirePrincipal(body) {

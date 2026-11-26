@@ -39,7 +39,7 @@ The page groups the same actions into three steps. Step 1 selects the person and
 | Restore Alice and Ben | `replaceAssignment` again, with Alice's and Ben's North/Bristol records from `fixture.mjs`. |
 | 15 November 2026 / 1 December 2026 | Moves the clock that was passed to `startAll`. Dana's acting appointment runs from 2026-11-01 through 2026-11-30, so 1 December is after it. |
 | Open Alice against the mixed snapshot | A second, short-lived `startAll` whose ledger read returns rows L1, L2, and L3. Nora prepares and Alice opens. The main model is left as it was. |
-| Reset to the opening fixture | Closes the model and calls `startAll` again. The report reference, clock, policy, and assignments return to the opening state. The selected person stays. |
+| Reset to the opening fixture | Closes the model and calls `startAll` again. The report reference, clock, policy, assignments, and signed-in person return to the opening state, and the report card shows the original Nora and Alice prompt. |
 
 After a transfer, a policy change, or a date change, open the report again. The next open is decided against the facts at that moment.
 
