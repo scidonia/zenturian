@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zenturian payroll presenter</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <div class="frame">
+  <header class="mast">
+    <img class="logo" src="/logo.svg" alt="Zenturian">
+    <div class="mast-copy">
+      <p class="eyebrow">Executable model</p>
+      <h1>Payroll release</h1>
+      <p class="lede">Sign in, prepare the October report, then open it. Each demonstration changes one fact. Open again to see it take effect.</p>
+    </div>
+    <dl class="meters" id="meters"></dl>
+  </header>
+
+  <p class="banner" id="banner" hidden></p>
+
+  <main>
+    <section class="panel" aria-labelledby="who-title">
+      <h2 id="who-title">1. Sign in</h2>
+      <p class="hint">Prepare and Open use whoever is selected. The model decides from that session. Choosing a person here does not release anything.</p>
+      <div class="people" id="people"></div>
+    </section>
+
+    <section class="panel report" aria-labelledby="report-title">
+      <div class="report-head">
+        <h2 id="report-title">2. North Bristol, October 2026</h2>
+        <p class="report-ref" id="report-ref"></p>
+      </div>
+      <div id="result" aria-live="polite"></div>
+      <div class="actions">
+        <div class="control">
+          <button type="button" id="prepare">Prepare the report</button>
+          <p>Nora, the payroll preparer, receives an opaque reference and no pay. Anyone else is refused.</p>
+        </div>
+        <div class="control">
+          <button type="button" id="open">Open the report</button>
+          <p>Releases the two Bristol rows only to the person allowed right now. A refusal returns zero rows.</p>
+        </div>
+        <div class="control">
+          <button type="button" id="body" class="secondary">Ask to open as Alice, while signed in as Nora</button>
+          <p>Sends Nora's session with Alice named in the body. The model still treats Nora as the recipient.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="world-title">
+      <h2 id="world-title">3. Change one fact</h2>
+      <p class="hint">Nothing here releases pay. After a change, use Open the report as the person named in that demonstration.</p>
+
+      <div class="steps">
+      <div class="step">
+        <h3>The rule: who counts as a manager</h3>
+        <p class="what">Policy v1 releases to the active Bristol manager, Alice. Policy v2 also releases to an appointed acting manager. Dana holds that appointment. Sign in as Dana and open under each policy.</p>
+        <div class="stack">
+          <button type="button" class="toggle" id="policy-v1" data-policy="v1">Use policy v1</button>
+          <button type="button" class="toggle" id="policy-v2" data-policy="v2">Use policy v2</button>
+        </div>
+      </div>
+
+      <div class="step">
+        <h3>The person: who manages Bristol</h3>
+        <p class="what">Ends Alice's management on 14 November 2026 and makes Ben the manager from 1 November 2026. Open as Alice, then as Ben. Restore puts both back to the fixture.</p>
+        <div class="stack">
+          <button type="button" id="transfer">Transfer Bristol management to Ben</button>
+          <button type="button" id="restore" class="secondary">Restore Alice and Ben</button>
+        </div>
+      </div>
+
+      <div class="step">
+        <h3>The date: Dana's appointment</h3>
+        <p class="what">Dana is acting Bristol manager from 1 November through 30 November 2026. On 15 November that appointment is active. On 1 December it has ended. Use policy v2, then open as Dana on each date.</p>
+        <div class="stack">
+          <button type="button" class="toggle" id="day-open" data-day="2026-11-15">15 November 2026</button>
+          <button type="button" class="toggle" id="day-expiry" data-day="2026-12-01">1 December 2026</button>
+        </div>
+      </div>
+
+      <div class="step">
+        <h3>A row from the wrong shop</h3>
+        <p class="what">Runs a separate copy of the model in which the Bristol snapshot also contains L3, a Cardiff row. Alice is still the manager. The release is refused and no amounts are returned. This copy does not change the report on the left.</p>
+        <div class="stack">
+          <button type="button" id="mixed" class="secondary">Open Alice against the mixed snapshot</button>
+          <button type="button" id="reset" class="secondary">Reset to the opening fixture</button>
+        </div>
+        <div id="mixed-result"></div>
+      </div>
+      </div>
+    </section>
+
+    <section class="panel roster" aria-labelledby="directory-title">
+      <h2 id="directory-title">Who holds which role right now</h2>
+      <p class="hint">Active means the role covers the date in the header. An inactive role does not receive the report.</p>
+      <div id="directory"></div>
+
+      <h2 id="record-title">What was recorded</h2>
+      <p class="hint">Releases and policy changes. The verdict, the person, and the row count. The amounts stay off this record.</p>
+      <div id="audit"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>A refusal on this page is the running model's refusal, with no salary rows. The JavaScript model does not prove certification, host isolation, or confidentiality.</p>
+  </footer>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

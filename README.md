@@ -10,7 +10,9 @@ Status: planning. [PLAN.md](PLAN.md) is the implementation plan,
 [docs/zenturian-permissions-and-data-flow-pilot.md](docs/zenturian-permissions-and-data-flow-pilot.md)
 the first client pilot. A JavaScript prototype of that pilot exists under
 [examples/payroll/](examples/payroll/); the Lean system still has no build, and the commands in
-the plan are the target interface created by milestone M0.
+the plan are the target interface created by milestone M0. To work through the payroll scenarios
+yourself, run the presenter in [examples/payroll-presenter/](examples/payroll-presenter/) and open
+the page it prints.
 
 ## Design in one paragraph
 
