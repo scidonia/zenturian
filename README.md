@@ -2,13 +2,14 @@
 
 # Zenturian
 
-**Business rules that survive contact with real systems.**
+**Control who can see what, across services.**
 
-Zenturian is an open-source enforcement boundary for permissions and disclosure. A central broker
-certifies each call; a proxy is the only route between components; responses cross as typed views
-carrying only what the recipient may see. Components stay in whatever language they already use. AI
-can read the rules, propose the formal policy and explain decisions; Lean checks the enforcement,
-and a deployment can be certified against a published theorem.
+Business rules that survive contact with real systems. Zenturian is an open-source enforcement
+boundary for permissions and disclosure. A central broker certifies each call; a proxy is the only
+route between components; responses cross as typed views carrying only what the recipient may see.
+Components stay in whatever language they already use. AI can read the rules, propose the formal
+policy and explain decisions; Lean checks the enforcement, and a deployment can be certified
+against a published theorem.
 
 [Implementation plan](PLAN.md) · [Certification design](docs/theorem.md) ·
 [Payroll pilot](docs/zenturian-permissions-and-data-flow-pilot.md) ·
