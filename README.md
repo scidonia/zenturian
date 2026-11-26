@@ -12,7 +12,8 @@ and a deployment can be certified against a published theorem.
 
 [Implementation plan](PLAN.md) · [Certification design](docs/theorem.md) ·
 [Payroll pilot](docs/zenturian-permissions-and-data-flow-pilot.md) ·
-[Run the prototype](examples/payroll/README.md)
+[Run the prototype](examples/payroll/README.md) ·
+[Presenter](examples/payroll-presenter/README.md)
 
 ## The failures it is built for
 

@@ -1,0 +1,13 @@
+{
+  "name": "zenturian-payroll-presenter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local web presenter for the Zenturian payroll example",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.mjs"
+  }
+}

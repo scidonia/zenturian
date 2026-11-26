@@ -21,11 +21,18 @@ From the repository root:
 node --version
 node examples/payroll/src/demo.mjs
 node --test tests/payroll/*.test.mjs
+node examples/payroll-presenter/src/server.mjs
 ```
 
 The demo starts each service on an ephemeral loopback port, runs the acts below, prints the audit
 summary and closes the system. No environment variable is required. The test command runs the
 three checked-in contract files together; each can also be run on its own.
+
+The last command starts the presenter and prints a local page, `http://127.0.0.1:4173`. Use it to
+work through the same scenarios one step at a time: choose a person, prepare and open the report,
+then change the policy, the Bristol manager, the date, or the snapshot and open the report again.
+Stop it with Ctrl-C. How the page calls this model is described in
+[examples/payroll-presenter/README.md](../payroll-presenter/README.md).
 
 ## Fixture
 
