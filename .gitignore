@@ -6,6 +6,10 @@ build/
 *.olean
 *.ilean
 
+# Nix build results
+result
+result-*
+
 # Appraisal runs
 appraisal/runs/
 
